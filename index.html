@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Flex 放单规律记录</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <h1>Flex 放单规律记录</h1>
+        <p>手机记录 · 本地存储 · JSON 导入导出</p>
+      </div>
+      <button id="menuToggle" class="ghost-btn">☰</button>
+    </header>
+
+    <nav class="tabbar" id="tabbar">
+      <button class="tab active" data-tab="recordTab">录入</button>
+      <button class="tab" data-tab="statsTab">规律统计</button>
+      <button class="tab" data-tab="recordsTab">记录列表</button>
+      <button class="tab" data-tab="settingsTab">设置</button>
+    </nav>
+
+    <main>
+      <section id="recordTab" class="tab-panel active">
+        <div class="card">
+          <h2>新增放单记录</h2>
+          <div class="form-grid">
+            <label>
+              <span>观察日期</span>
+              <input type="date" id="recordDate" />
+            </label>
+            <label>
+              <span>观察时间（精确到分钟）</span>
+              <input type="time" id="recordTime" step="60" required />
+            </label>
+            <label>
+              <span>星期</span>
+              <input type="text" id="recordWeekday" readonly />
+            </label>
+            <label>
+              <span>时段</span>
+              <select id="recordPeriod">
+                <option value="上午">上午</option>
+                <option value="下午">下午</option>
+              </select>
+            </label>
+            <label>
+              <span>本分钟波次数</span>
+              <select id="waveCount">
+                <option value="1">1 波</option>
+                <option value="2">2 波</option>
+                <option value="3">3 波</option>
+                <option value="4">4 波</option>
+              </select>
+            </label>
+            <label>
+              <span>备注</span>
+              <input type="text" id="recordNote" placeholder="例如：第2波更容易出好单" />
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-head">
+            <h2>波次详情</h2>
+            <button id="regenWavesBtn" class="small-btn">刷新波次表单</button>
+          </div>
+          <div id="wavesContainer"></div>
+        </div>
+
+        <div class="card sticky-actions">
+          <button id="saveRecordBtn" class="primary-btn">保存记录</button>
+          <button id="resetFormBtn" class="secondary-btn">清空表单</button>
+        </div>
+      </section>
+
+      <section id="statsTab" class="tab-panel">
+        <div class="card">
+          <div class="section-head">
+            <h2>规律统计</h2>
+            <button id="refreshStatsBtn" class="small-btn">刷新统计</button>
+          </div>
+          <div class="stat-filters">
+            <label>
+              <span>星期</span>
+              <select id="statsWeekdayFilter">
+                <option value="全部">全部</option>
+                <option value="周一">周一</option>
+                <option value="周二">周二</option>
+                <option value="周三">周三</option>
+                <option value="周四">周四</option>
+                <option value="周五">周五</option>
+                <option value="周六">周六</option>
+                <option value="周日">周日</option>
+              </select>
+            </label>
+            <label>
+              <span>时段</span>
+              <select id="statsPeriodFilter">
+                <option value="全部">全部</option>
+                <option value="上午">上午</option>
+                <option value="下午">下午</option>
+              </select>
+            </label>
+          </div>
+          <div id="statsSummary" class="stats-summary"></div>
+          <div id="statsList"></div>
+        </div>
+      </section>
+
+      <section id="recordsTab" class="tab-panel">
+        <div class="card">
+          <div class="section-head">
+            <h2>全部记录</h2>
+            <button id="refreshRecordsBtn" class="small-btn">刷新列表</button>
+          </div>
+          <div id="recordsList"></div>
+        </div>
+      </section>
+
+      <section id="settingsTab" class="tab-panel">
+        <div class="card">
+          <h2>仓库简称设置</h2>
+          <p class="muted">这些简称会用于录入时快速选择。</p>
+          <textarea id="warehousePresetInput" rows="12"></textarea>
+          <div class="row-actions">
+            <button id="saveWarehousePresetBtn" class="primary-btn">保存仓库列表</button>
+            <button id="resetWarehousePresetBtn" class="secondary-btn">恢复默认仓库</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>数据管理</h2>
+          <div class="row-actions wrap">
+            <button id="exportJsonBtn" class="primary-btn">导出 JSON</button>
+            <label class="file-btn">
+              导入 JSON
+              <input type="file" id="importJsonInput" accept="application/json" hidden />
+            </label>
+            <button id="clearAllBtn" class="danger-btn">清空全部数据</button>
+          </div>
+          <p class="muted">建议每天或每周导出一次 JSON 备份。</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <template id="waveTemplate">
+    <div class="wave-card">
+      <div class="wave-title-row">
+        <h3 class="wave-title"></h3>
+      </div>
+      <div class="form-grid">
+        <label>
+          <span>该波出现时间（可填秒）</span>
+          <input type="time" class="wave-seconds" step="1" />
+        </label>
+        <label>
+          <span>该波看到几条单</span>
+          <input type="number" min="0" class="wave-offer-count" placeholder="例如 3" />
+        </label>
+        <label>
+          <span>该波是否抢到</span>
+          <select class="wave-captured">
+            <option value="否">否</option>
+            <option value="是">是</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="subsection">
+        <div class="section-head">
+          <h4>看到的出单列表</h4>
+          <button type="button" class="small-btn add-offer-btn">新增一条</button>
+        </div>
+        <div class="offers-container"></div>
+      </div>
+
+      <div class="subsection captured-section hidden">
+        <h4>抢到的单</h4>
+        <div class="captured-form"></div>
+      </div>
+    </div>
+  </template>
+
+  <template id="offerTemplate">
+    <div class="offer-item">
+      <div class="offer-grid">
+        <label>
+          <span>仓库</span>
+          <div class="combo-box">
+            <select class="offer-warehouse-select"></select>
+            <input type="text" class="offer-warehouse-custom hidden" placeholder="自定义仓库简称" />
+          </div>
+        </label>
+        <label>
+          <span>类型</span>
+          <select class="offer-type">
+            <option value="Whole Foods">Whole Foods</option>
+            <option value="Amazon block">Amazon block</option>
+            <option value="超市单">超市单</option>
+            <option value="其他">其他</option>
+          </select>
+        </label>
+        <label>
+          <span>执行日期</span>
+          <input type="date" class="offer-exec-date" />
+        </label>
+        <label>
+          <span>执行星期</span>
+          <input type="text" class="offer-exec-weekday" readonly />
+        </label>
+        <label>
+          <span>开始时间</span>
+          <input type="time" class="offer-start" step="60" />
+        </label>
+        <label>
+          <span>结束时间</span>
+          <input type="time" class="offer-end" step="60" />
+        </label>
+        <label>
+          <span>价格（美元）</span>
+          <input type="number" min="0" step="0.01" class="offer-price" placeholder="例如 48" />
+        </label>
+        <label>
+          <span>属于</span>
+          <select class="offer-week-bucket">
+            <option value="当天">当天</option>
+            <option value="本周">本周</option>
+            <option value="下周">下周</option>
+            <option value="更远">更远</option>
+          </select>
+        </label>
+      </div>
+      <div class="row-actions end">
+        <button type="button" class="danger-text-btn remove-offer-btn">删除这条</button>
+      </div>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
